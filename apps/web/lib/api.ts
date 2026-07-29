@@ -5,6 +5,8 @@ export type Session = { id: string; project_id: string; title: string; status: s
 export type Memory = { id: string; project_id: string; memory_type: string; title: string; content: string; concise_summary: string; importance_score: number; confidence_score: number; status: string; access_count: number; superseded_by_memory_id: string | null; created_at: string };
 export type Trace = { memory: Memory; vector_similarity: number; importance_component: number; recency_component: number; confidence_component: number; status_component: number; final_score: number; rank: number; selected_for_context: boolean; selection_reason: string };
 export type Answer = { response_id: string; retrieval_run_id: string; answer: string; confidence: number; memory_trace: Trace[]; mock_generated: boolean };
+export type DecisionHistory = { former: Memory; current: Memory | null; relation_type: string; confidence: number };
+export type Handoff = { project_id: string; generated_at: string; summary: string; carry_forward: Memory[]; do_not_repeat: Memory[]; unresolved: Memory[] };
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {

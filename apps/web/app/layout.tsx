@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Activity, Archive, Blocks, Bot, BrainCircuit, Database, GitBranch, LayoutDashboard } from "lucide-react";
+import { Activity, Archive, Blocks, Bot, BrainCircuit, Database, GitBranch, LayoutDashboard, History, Handshake } from "lucide-react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,6 +13,8 @@ const nav = [
   ["/workspace", "Agent workspace", Bot],
   ["/memories", "Memory explorer", BrainCircuit],
   ["/timeline", "Timeline", GitBranch],
+  ["/graveyard", "Decision graveyard", History],
+  ["/handoff", "Agent handoff", Handshake],
   ["/consolidation", "Consolidation", Blocks],
   ["/architecture", "Architecture", Database],
   ["/mcp", "MCP Inspector", Activity],

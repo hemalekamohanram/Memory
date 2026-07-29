@@ -126,6 +126,22 @@ class ConsolidationRequest(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=100)
 
 
+class DecisionHistoryItem(BaseModel):
+    former: MemoryOut
+    current: MemoryOut | None = None
+    relation_type: str
+    confidence: float
+
+
+class HandoffBrief(BaseModel):
+    project_id: str
+    generated_at: datetime
+    summary: str
+    carry_forward: list[MemoryOut]
+    do_not_repeat: list[MemoryOut]
+    unresolved: list[MemoryOut]
+
+
 class Envelope(BaseModel):
     data: object
     request_id: str

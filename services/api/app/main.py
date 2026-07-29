@@ -2,6 +2,7 @@ import logging
 import secrets
 import time
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -32,8 +33,10 @@ from .schemas import (
     AgentAnswer,
     CandidateTrace,
     ConsolidationRequest,
+    DecisionHistoryItem,
     EventCreate,
     EventIngestResult,
+    HandoffBrief,
     MemoryOut,
     MessageCreate,
     ProjectCreate,
@@ -181,6 +184,50 @@ def list_memories(project_id: str, status: str | None = None, memory_type: str |
     if memory_type:
         query = query.where(Memory.memory_type == memory_type)
     return list(db.scalars(query.order_by(Memory.updated_at.desc())))
+
+
+@app.get("/api/projects/{project_id}/decision-graveyard", response_model=list[DecisionHistoryItem])
+def decision_graveyard(project_id: str, db: Session = Depends(get_db),
+                       actor: tuple[str, str] = Depends(principal)):
+    scoped_project(db, project_id, actor[0])
+    results: list[DecisionHistoryItem] = []
+    relations = list(db.scalars(select(MemoryRelation).join(
+        Memory, Memory.id == MemoryRelation.from_memory_id
+    ).where(Memory.project_id == project_id, MemoryRelation.relation_type.in_(["supersedes", "resolved_by"]))))
+    for relation in relations:
+        former = db.get(Memory, relation.from_memory_id)
+        current = db.get(Memory, relation.to_memory_id)
+        if former:
+            results.append(DecisionHistoryItem(
+                former=MemoryOut.model_validate(former),
+                current=MemoryOut.model_validate(current) if current else None,
+                relation_type=relation.relation_type,
+                confidence=relation.confidence,
+            ))
+    return results
+
+
+@app.get("/api/projects/{project_id}/handoff", response_model=HandoffBrief)
+def handoff_brief(project_id: str, db: Session = Depends(get_db),
+                  actor: tuple[str, str] = Depends(principal)):
+    scoped_project(db, project_id, actor[0])
+    memories = list(db.scalars(select(Memory).where(
+        Memory.project_id == project_id, Memory.organization_id == actor[0]
+    ).order_by(Memory.importance_score.desc(), Memory.updated_at.desc())))
+    carry_forward = [m for m in memories if m.status == "active" and m.memory_type in {
+        "architecture_decision", "successful_fix", "security_constraint", "incident", "task_state"
+    }][:6]
+    do_not_repeat = [m for m in memories if m.status == "superseded" or m.memory_type == "rejected_approach"][:5]
+    unresolved = [m for m in memories if m.status == "disputed"][:5]
+    return HandoffBrief(
+        project_id=project_id,
+        generated_at=datetime.now(UTC),
+        summary=("This briefing carries forward verified project knowledge for the next agent. "
+                 "Treat disputed records as open questions and never revive superseded decisions."),
+        carry_forward=[MemoryOut.model_validate(m) for m in carry_forward],
+        do_not_repeat=[MemoryOut.model_validate(m) for m in do_not_repeat],
+        unresolved=[MemoryOut.model_validate(m) for m in unresolved],
+    )
 
 
 @app.get("/api/memories/{memory_id}", response_model=MemoryOut)
