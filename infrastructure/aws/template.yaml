@@ -74,10 +74,10 @@ Resources:
       Events:
         Root:
           Type: Api
-          Properties: { RestApiId: !Ref EngramGateway, Path: /, Method: ANY }
+          Properties: { RestApiId: !Ref EngramGateway, Path: "/", Method: ANY }
         Proxy:
           Type: Api
-          Properties: { RestApiId: !Ref EngramGateway, Path: /{proxy+}, Method: ANY }
+          Properties: { RestApiId: !Ref EngramGateway, Path: "/{proxy+}", Method: ANY }
 
   ConsolidationWorker:
     Type: AWS::Serverless::Function
