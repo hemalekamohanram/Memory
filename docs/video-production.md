@@ -69,3 +69,17 @@
 - Cut pauses, loading screens, login screens, terminal output, and credentials.
 - Add simple opening and closing title cards only; do not use distracting transitions.
 - Upload as **public** to YouTube or Vimeo and verify playback while signed out.
+
+## Human narration workflow
+
+Use your own voice for the recording. It is the most natural option and avoids representing synthetic narration as human. Record in one quiet take with a headset or phone microphone 15-20 cm from your mouth. Speak conversationally, not like you are reading a document: pause briefly after the CockroachDB explanation, the fresh-session proof, and the trace explanation.
+
+If a retake is needed, rerecord only that segment and replace it in Loom, Clipchamp, or CapCut. Do not show passwords, connection strings, AWS account IDs, personal browser tabs, raw terminal history, or CockroachDB credentials. The final video should be 2:50-2:58, public, and below the hackathon's 3-minute limit.
+
+## Suggested gallery captures
+
+1. Engram Overview with memory counts.
+2. Workspace answer in a fresh session.
+3. Memory Trace with selected candidate and score breakdown.
+4. Decision Graveyard or Agent Handoff.
+5. Architecture page or the live CockroachDB vector-index evidence.
