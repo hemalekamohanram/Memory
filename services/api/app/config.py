@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=64, ge=16, le=4096)
     live_embedding_dimension: int = Field(default=1024, ge=256, le=4096)
     bedrock_region: str = "us-west-2"
-    bedrock_chat_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    # Use the serverless global inference profile selected in the Bedrock console.
+    # It avoids provisioned throughput while keeping the adapter on Bedrock's
+    # Converse API.
+    bedrock_chat_model_id: str = "global.amazon.nova-2-lite-v1:0"
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
     s3_archive_bucket: str | None = None
     local_archive_dir: Path = Path("./local-archive")

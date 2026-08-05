@@ -2,7 +2,8 @@ CREATE DATABASE IF NOT EXISTS engram;
 USE engram;
 
 -- Application migrations own table creation. This production-only index assumes
--- EMBEDDING_DIMENSION=64; keep application configuration and migration aligned.
+-- LIVE_EMBEDDING_DIMENSION=1024 for Amazon Titan Text Embeddings V2; keep
+-- application configuration and existing stored vectors aligned.
 SET CLUSTER SETTING feature.vector_index.enabled = true;
 
 CREATE VECTOR INDEX IF NOT EXISTS memories_embedding_idx

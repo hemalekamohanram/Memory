@@ -64,7 +64,7 @@ python scripts/smoke_demo.py
 ## Live CockroachDB and AWS mode
 
 1. Copy `.env.example` to `.env`, set `ENGRAM_MODE=live`, and provide a TLS CockroachDB `DATABASE_URL`.
-2. Set the configurable Bedrock chat/embedding model IDs and AWS region; authenticate through the standard AWS credential chain.
+2. Set the configurable Bedrock chat/embedding model IDs and AWS region; the deployment defaults to the serverless `global.amazon.nova-2-lite-v1:0` inference profile and Titan Text Embeddings V2. Authenticate through the standard AWS credential chain.
 3. Set `S3_ARCHIVE_BUCKET`, run application migrations, and create the vector index in `infrastructure/cockroach/bootstrap.sql` with the configured dimension.
 4. Deploy `infrastructure/aws/template.yaml` using AWS SAM for the encrypted bucket and consolidation worker.
 

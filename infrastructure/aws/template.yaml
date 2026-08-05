@@ -1,10 +1,35 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Engram consolidation worker and encrypted evidence archive
+Description: Engram API, consolidation worker, and encrypted evidence archive
+
 Parameters:
   DatabaseUrlParameter:
     Type: String
     NoEcho: true
+    Description: CockroachDB TLS SQLAlchemy connection URL for the engram_app user.
+  WebOrigin:
+    Type: String
+    Default: http://localhost:3000
+    Description: Public Next.js origin allowed to call the API.
+  BedrockChatModelId:
+    Type: String
+    Default: global.amazon.nova-2-lite-v1:0
+    Description: Bedrock serverless inference-profile ID for grounded answers and extraction.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 60
+    MemorySize: 1024
+    Environment:
+      Variables:
+        ENGRAM_MODE: live
+        DATABASE_URL: !Ref DatabaseUrlParameter
+        BEDROCK_REGION: !Ref AWS::Region
+        BEDROCK_CHAT_MODEL_ID: !Ref BedrockChatModelId
+        BEDROCK_EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
+        LIVE_EMBEDDING_DIMENSION: 1024
+
 Resources:
   EvidenceBucket:
     Type: AWS::S3::Bucket
@@ -17,17 +42,65 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  EngramGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Engram-Key,X-Organization-Id,X-User-Id'"
+        AllowOrigin: !Sub "'${WebOrigin}'"
+
+  EngramApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../..
+      Handler: services.api.app.main.lambda_handler
+      Environment:
+        Variables:
+          S3_ARCHIVE_BUCKET: !Ref EvidenceBucket
+          WEB_ORIGIN: !Ref WebOrigin
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref EvidenceBucket }
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:Converse
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        Root:
+          Type: Api
+          Properties: { RestApiId: !Ref EngramGateway, Path: /, Method: ANY }
+        Proxy:
+          Type: Api
+          Properties: { RestApiId: !Ref EngramGateway, Path: /{proxy+}, Method: ANY }
+
   ConsolidationWorker:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python3.12
+      CodeUri: ../..
       Handler: services.worker.handler.lambda_handler
       Timeout: 120
-      MemorySize: 512
       Environment:
         Variables:
-          ENGRAM_MODE: live
-          DATABASE_URL: !Ref DatabaseUrlParameter
           S3_ARCHIVE_BUCKET: !Ref EvidenceBucket
       Policies:
-        - S3WritePolicy: { BucketName: !Ref EvidenceBucket }
+        - S3CrudPolicy: { BucketName: !Ref EvidenceBucket }
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:Converse
+                - bedrock:InvokeModel
+              Resource: "*"
+
+Outputs:
+  ApiUrl:
+    Description: Public Engram API endpoint
+    Value: !Sub "https://${EngramGateway}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  EvidenceBucketName:
+    Description: Encrypted evidence archive bucket
+    Value: !Ref EvidenceBucket

@@ -74,6 +74,13 @@ app.add_middleware(CORSMiddleware, allow_origins=[
 ], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 
+try:
+    from mangum import Mangum
+
+    lambda_handler = Mangum(app, lifespan="auto")
+except ImportError:  # Local installs predating the Lambda dependency still run the API directly.
+    lambda_handler = None
+
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):
@@ -91,8 +98,10 @@ async def request_context(request: Request, call_next):
 def principal(x_organization_id: str | None = Header(default=None),
               x_user_id: str | None = Header(default=None),
               x_engram_key: str | None = Header(default=None)) -> tuple[str, str]:
-    if settings.engram_mode == "live":
-        if not settings.demo_api_key or not x_engram_key or not secrets.compare_digest(
+    # A public, seeded hackathon demo intentionally omits DEMO_API_KEY. Production
+    # callers set it and must supply the matching header (or sit behind an auth proxy).
+    if settings.engram_mode == "live" and settings.demo_api_key:
+        if not x_engram_key or not secrets.compare_digest(
             settings.demo_api_key, x_engram_key
         ):
             raise HTTPException(401, "Valid X-Engram-Key required in live demo mode")
